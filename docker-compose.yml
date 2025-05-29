@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=your_mysql_root_password
+      - DB_NAME=taskdb
+      - JWT_SECRET=your_jwt_secret
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=your_mysql_root_password
+      - MYSQL_DATABASE=taskdb
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql-data: 
