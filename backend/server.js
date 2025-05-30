@@ -12,8 +12,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:3000', // Allow frontend access
-  credentials: true
+  origin: process.env.FRONTEND_URL || ['http://localhost:3000', 'http://localhost', 'http://frontend'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -173,14 +175,25 @@ app.post('/api/auth/signup', async (req, res) => {
       );
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
+    // Generate access token and refresh token
+    const accessToken = jwt.sign(
       { userId: userId, email: email },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '1h' }
     );
 
-    res.status(201).json({ token, boardId });
+    const refreshToken = jwt.sign(
+      { userId: userId, email: email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({ 
+      accessToken,
+      refreshToken,
+      boardId,
+      expiresIn: 3600 // 1 hour in seconds
+    });
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -218,20 +231,56 @@ app.post('/api/auth/login', async (req, res) => {
       [user.id]
     );
 
-    // Generate JWT token
-    const token = jwt.sign(
+    // Generate access token and refresh token
+    const accessToken = jwt.sign(
       { userId: user.id, email: user.email },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '1h' }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
     );
 
     res.json({ 
-      token,
-      boardId: boards.length > 0 ? boards[0].id : null
+      accessToken,
+      refreshToken,
+      boardId: boards.length > 0 ? boards[0].id : null,
+      expiresIn: 3600 // 1 hour in seconds
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Add refresh token endpoint
+app.post('/api/auth/refresh', async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({ message: 'Refresh token is required' });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_SECRET);
+    
+    // Generate new access token
+    const accessToken = jwt.sign(
+      { userId: decoded.userId, email: decoded.email },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.json({ 
+      accessToken,
+      expiresIn: 3600 // 1 hour in seconds
+    });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
 });
 

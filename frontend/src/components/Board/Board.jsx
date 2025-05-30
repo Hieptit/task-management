@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const BoardContainer = styled.div`
   padding: 20px;
@@ -67,6 +67,29 @@ const LoadingSpinner = styled.div`
   min-height: 200px;
 `;
 
+const ErrorContainer = styled.div`
+  color: #ff4444;
+  text-align: center;
+  padding: 20px;
+  background: #ffe6e6;
+  border-radius: 10px;
+  margin: 20px 0;
+`;
+
+const RetryButton = styled.button`
+  background: #6c5ce7;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  margin-top: 10px;
+  cursor: pointer;
+  
+  &:hover {
+    background: #5f50e1;
+  }
+`;
+
 const Board = () => {
   const [tasks, setTasks] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,55 +100,54 @@ const Board = () => {
   const [boardDescription, setBoardDescription] = useState('Tasks to keep organised');
   const [isEditingBoard, setIsEditingBoard] = useState(false);
   const navigate = useNavigate();
-
-  const boardId = localStorage.getItem('boardId');
+  const { boardId } = useParams();
 
   useEffect(() => {
+    console.log('Board component mounted with boardId:', boardId);
     if (!boardId) {
-      // Nếu không có boardId, tạo board mới
-      const createNewBoard = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            navigate('/');
-            return;
-          }
-
-          const apiUrl = 'http://localhost:5000';
-          const response = await axios.post(`${apiUrl}/api/boards`, {}, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (response.data && response.data.boardId) {
-            localStorage.setItem('boardId', response.data.boardId);
-            navigate(`/board/${response.data.boardId}`);
-          } else {
-            setError('Invalid board data received');
-            setLoading(false);
-          }
-        } catch (err) {
-          console.error('Board creation error:', err);
-          if (err.response?.status === 401) {
-            navigate('/');
-          } else {
-            setError(err.response?.data?.message || 'Failed to create board');
-            setLoading(false);
-          }
-        }
-      };
       createNewBoard();
     } else {
       fetchBoard();
     }
-  }, [boardId, navigate]);
+  }, [boardId]);
 
-  // Fetch board and tasks from backend
-  const fetchBoard = async () => {
+  const createNewBoard = async () => {
+    console.log('Creating new board...');
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        console.log('No token found, redirecting to login');
+        navigate('/');
+        return;
+      }
+
+      const apiUrl = 'http://localhost:5000';
+      const response = await axios.post(`${apiUrl}/api/boards`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('New board created:', response.data);
+      if (response.data && response.data.boardId) {
+        localStorage.setItem('boardId', response.data.boardId);
+        navigate(`/board/${response.data.boardId}`);
+      } else {
+        setError('Invalid board data received');
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error('Board creation error:', err);
+      handleError(err);
+    }
+  };
+
+  const fetchBoard = async () => {
+    console.log('Fetching board data...');
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        console.log('No access token found, redirecting to login');
         navigate('/');
         return;
       }
@@ -137,29 +159,36 @@ const Board = () => {
         }
       });
 
+      console.log('Board data received:', response.data);
       if (response.data) {
         setTasks(response.data.tasks || []);
         setBoardName(response.data.name || 'My Task Board');
         setBoardDescription(response.data.description || 'Tasks to keep organised');
-        setLoading(false);
+        setError(null);
       } else {
         setError('Invalid board data received');
-        setLoading(false);
       }
     } catch (err) {
       console.error('Board fetch error:', err);
-      if (err.response?.status === 401) {
-        navigate('/');
-      } else {
-        setError(err.response?.data?.message || 'Failed to load board');
-        setLoading(false);
-      }
+      handleError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleError = (err) => {
+    if (err.response?.status === 401) {
+      console.log('Authentication error, redirecting to login');
+      navigate('/');
+    } else {
+      setError(err.response?.data?.message || 'Failed to load board');
+      setLoading(false);
     }
   };
 
   const handleBoardUpdate = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       await axios.put(`${process.env.REACT_APP_API_URL}/api/boards/${boardId}`, {
         name: boardName,
         description: boardDescription
@@ -169,14 +198,16 @@ const Board = () => {
         }
       });
       setIsEditingBoard(false);
+      setError(null);
     } catch (err) {
-      setError('Failed to update board');
+      console.error('Board update error:', err);
+      handleError(err);
     }
   };
 
   const handleTaskUpdate = async (updatedTask) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (updatedTask.id) {
         const apiUrl = 'http://localhost:5000';
         await axios.put(`${apiUrl}/api/tasks/${updatedTask.id}`, updatedTask, {
@@ -188,15 +219,16 @@ const Board = () => {
       }
       await fetchBoard();
       setIsModalOpen(false);
+      setError(null);
     } catch (err) {
       console.error('Task update error:', err);
-      setError('Failed to update task');
+      handleError(err);
     }
   };
 
   const handleTaskDelete = async (taskId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const apiUrl = 'http://localhost:5000';
       await axios.delete(`${apiUrl}/api/tasks/${taskId}`, {
         headers: {
@@ -205,9 +237,10 @@ const Board = () => {
       });
       await fetchBoard();
       setIsModalOpen(false);
+      setError(null);
     } catch (err) {
       console.error('Task deletion error:', err);
-      setError('Failed to delete task');
+      handleError(err);
     }
   };
 
@@ -220,7 +253,7 @@ const Board = () => {
     };
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const apiUrl = 'http://localhost:5000';
       const response = await axios.post(`${apiUrl}/api/boards/${boardId}/tasks`, newTask, {
         headers: {
@@ -232,15 +265,22 @@ const Board = () => {
       setSelectedTask(createdTask);
       setIsModalOpen(true);
       await fetchBoard();
+      setError(null);
     } catch (err) {
       console.error('Task creation error:', err);
-      setError('Failed to create task');
+      handleError(err);
     }
   };
 
   const handleTaskClick = (task) => {
     setSelectedTask(task);
     setIsModalOpen(true);
+  };
+
+  const handleRetry = () => {
+    setLoading(true);
+    setError(null);
+    fetchBoard();
   };
 
   if (loading) {
@@ -254,7 +294,13 @@ const Board = () => {
   if (error) {
     return (
       <BoardContainer>
-        <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>
+        <ErrorContainer>
+          <h3>Error loading board</h3>
+          <p>{error}</p>
+          <RetryButton onClick={handleRetry}>
+            Try Again
+          </RetryButton>
+        </ErrorContainer>
       </BoardContainer>
     );
   }
@@ -280,6 +326,7 @@ const Board = () => {
           </>
         )}
       </BoardHeader>
+      
       {isEditingBoard ? (
         <textarea
           value={boardDescription}
@@ -315,12 +362,6 @@ const Board = () => {
           onUpdate={handleTaskUpdate}
           onDelete={handleTaskDelete}
         />
-      )}
-
-      {error && (
-        <div style={{ color: 'red', textAlign: 'center', marginTop: '10px' }}>
-          {error}
-        </div>
       )}
     </BoardContainer>
   );
