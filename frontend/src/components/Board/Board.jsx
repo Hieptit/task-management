@@ -363,7 +363,16 @@ const Board = () => {
             <EditIcon onClick={() => setIsEditingBoard(true)}>✏️</EditIcon>
           </>
         )}
-        <AddTaskButton onClick={() => setIsAddingTask(true)}>Add New Task</AddTaskButton>
+        <AddTaskButton onClick={() => {
+          setSelectedTask({
+            id: null,
+            name: '',
+            description: '',
+            status: 'in-progress',
+            icon: '📝'
+          });
+          setIsModalOpen(true);
+        }}>Add New Task</AddTaskButton>
       </BoardHeader>
       
       {isEditingBoard ? (
@@ -396,24 +405,6 @@ const Board = () => {
           onUpdate={handleTaskUpdate}
           onDelete={handleTaskDelete}
         />
-      )}
-
-      {isAddingTask && (
-        <TaskForm>
-          <h2>Add New Task</h2>
-          <Input
-            placeholder="Task name"
-            value={newTask.name}
-            onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
-          />
-          <TextArea
-            placeholder="Task description"
-            value={newTask.description}
-            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-          />
-          <Button onClick={handleAddTask}>Save</Button>
-          <Button onClick={() => setIsAddingTask(false)}>Cancel</Button>
-        </TaskForm>
       )}
     </BoardContainer>
   );

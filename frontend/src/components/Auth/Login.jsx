@@ -125,12 +125,11 @@ const Login = ({ setAuth }) => {
       const response = await axios.post(`${apiUrl}/api/auth/login`, formData);
       console.log('Login response:', response.data);
       
-      const { accessToken, refreshToken, boardId, expiresIn } = response.data;
+      const { accessToken, refreshToken, expiresIn } = response.data;
       
-      // Store tokens and board ID
+      // Store tokens
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
-      localStorage.setItem('boardId', boardId);
 
       // Set token expiry time
       const expiryTime = new Date().getTime() + expiresIn * 1000;
@@ -138,8 +137,7 @@ const Login = ({ setAuth }) => {
 
       // Update auth state and navigate
       setAuth(true);
-      console.log('Navigating to board:', boardId);
-      navigate(`/board/${boardId}`);
+      navigate('/boards');
     } catch (err) {
       console.error('Login error:', err);
       
@@ -155,7 +153,6 @@ const Login = ({ setAuth }) => {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('tokenExpiry');
-      localStorage.removeItem('boardId');
     } finally {
       setLoading(false);
     }

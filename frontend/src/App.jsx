@@ -5,6 +5,7 @@ import axios from 'axios';
 import Login from './components/Auth/Login';
 import SignUp from './components/Auth/SignUp';
 import Board from './components/Board/Board';
+import BoardList from './components/Board/BoardList';
 import './App.css';
 
 const AppContainer = styled.div`
@@ -189,7 +190,7 @@ const App = () => {
             path="/" 
             element={
               isAuthenticated ? (
-                <Navigate to={`/board/${localStorage.getItem('boardId')}`} />
+                <Navigate to="/boards" />
               ) : (
                 <Login setAuth={setIsAuthenticated} />
               )
@@ -199,17 +200,17 @@ const App = () => {
             path="/signup" 
             element={
               isAuthenticated ? (
-                <Navigate to={`/board/${localStorage.getItem('boardId')}`} />
+                <Navigate to="/boards" />
               ) : (
                 <SignUp setAuth={setIsAuthenticated} />
               )
             } 
           />
           <Route 
-            path="/board" 
+            path="/boards" 
             element={
               isAuthenticated ? (
-                <Navigate to={`/board/${localStorage.getItem('boardId')}`} />
+                <BoardList />
               ) : (
                 <Navigate to="/" />
               )

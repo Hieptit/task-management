@@ -296,6 +296,32 @@ app.get('/api/auth/validate', authenticateToken, async (req, res) => {
 });
 
 // Board Routes
+app.get('/api/boards', authenticateToken, async (req, res) => {
+  try {
+    const [boards] = await pool.execute(
+      'SELECT * FROM boards WHERE user_id = ? ORDER BY created_at DESC',
+      [req.user.userId]
+    );
+
+    // Get tasks count for each board
+    const boardsWithTaskCount = await Promise.all(boards.map(async (board) => {
+      const [tasks] = await pool.execute(
+        'SELECT COUNT(*) as taskCount FROM tasks WHERE board_id = ?',
+        [board.id]
+      );
+      return {
+        ...board,
+        taskCount: tasks[0].taskCount
+      };
+    }));
+
+    res.json(boardsWithTaskCount);
+  } catch (error) {
+    console.error('Error fetching boards:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 app.get('/api/boards/:boardId', authenticateToken, async (req, res) => {
   try {
     const [boards] = await pool.execute(

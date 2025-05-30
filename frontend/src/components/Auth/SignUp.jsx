@@ -137,17 +137,16 @@ const SignUp = ({ setAuth }) => {
       });
       console.log('Signup response:', response.data); // Debug log
       
-      const { accessToken, refreshToken, boardId, expiresIn } = response.data;
+      const { accessToken, refreshToken, expiresIn } = response.data;
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
-      localStorage.setItem('boardId', boardId);
 
       // Set token expiry time
       const expiryTime = new Date().getTime() + expiresIn * 1000;
       localStorage.setItem('tokenExpiry', expiryTime);
 
       setAuth(true);
-      navigate(`/board/${boardId}`);
+      navigate('/boards');
     } catch (err) {
       console.error('Signup error:', err);
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
