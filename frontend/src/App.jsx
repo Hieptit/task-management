@@ -65,7 +65,7 @@ const App = () => {
                 throw new Error('No refresh token available');
               }
 
-              const apiUrl = 'http://localhost:5000';
+              const apiUrl = 'http://45.77.172.27:5001';
               const response = await axios.post(`${apiUrl}/api/auth/refresh`, {
                 refreshToken
               });
@@ -113,7 +113,7 @@ const App = () => {
         // Check if token is expired
         if (tokenExpiry && new Date().getTime() > parseInt(tokenExpiry)) {
           try {
-            const apiUrl = 'http://localhost:5000';
+            const apiUrl = 'http://45.77.172.27:5001';
             const response = await axios.post(`${apiUrl}/api/auth/refresh`, {
               refreshToken
             });
@@ -131,7 +131,7 @@ const App = () => {
           }
         } else {
           try {
-            const apiUrl = 'http://localhost:5000';
+            const apiUrl = 'http://45.77.172.27:5001';
             await axios.get(`${apiUrl}/api/auth/validate`, {
               headers: {
                 'Authorization': `Bearer ${accessToken}`

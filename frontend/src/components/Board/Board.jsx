@@ -14,13 +14,8 @@ const BoardContainer = styled.div`
 const BoardHeader = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 30px;
-  gap: 10px;
-
-  img {
-    width: 32px;
-    height: 32px;
-  }
 `;
 
 const BoardTitle = styled.h1`
@@ -41,22 +36,22 @@ const BoardDescription = styled.p`
 `;
 
 const TaskList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 `;
 
-const AddTaskButton = styled.div`
-  background: #fff3e0;
-  padding: 15px;
-  border-radius: 10px;
+const AddTaskButton = styled.button`
+  background: #6c5ce7;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  font-size: 16px;
   
   &:hover {
-    background: #ffe0b2;
+    background: #5f50e1;
   }
 `;
 
@@ -90,6 +85,50 @@ const RetryButton = styled.button`
   }
 `;
 
+const TaskForm = styled.div`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 500px;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  min-height: 100px;
+`;
+
+const Button = styled.button`
+  background: #6c5ce7;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: 10px;
+  
+  &:hover {
+    background: #5f50e1;
+  }
+`;
+
 const Board = () => {
   const [tasks, setTasks] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,6 +138,8 @@ const Board = () => {
   const [boardName, setBoardName] = useState('My Task Board');
   const [boardDescription, setBoardDescription] = useState('Tasks to keep organised');
   const [isEditingBoard, setIsEditingBoard] = useState(false);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [newTask, setNewTask] = useState({ name: '', description: '' });
   const navigate = useNavigate();
   const { boardId } = useParams();
 
@@ -121,7 +162,7 @@ const Board = () => {
         return;
       }
 
-      const apiUrl = 'http://localhost:5000';
+      const apiUrl = 'http://45.77.172.27:5001';
       const response = await axios.post(`${apiUrl}/api/boards`, {}, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -152,7 +193,7 @@ const Board = () => {
         return;
       }
 
-      const apiUrl = 'http://localhost:5000';
+      const apiUrl = 'http://45.77.172.27:5001';
       const response = await axios.get(`${apiUrl}/api/boards/${boardId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -179,6 +220,7 @@ const Board = () => {
   const handleError = (err) => {
     if (err.response?.status === 401) {
       console.log('Authentication error, redirecting to login');
+      localStorage.removeItem('accessToken');
       navigate('/');
     } else {
       setError(err.response?.data?.message || 'Failed to load board');
@@ -189,7 +231,8 @@ const Board = () => {
   const handleBoardUpdate = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      await axios.put(`${process.env.REACT_APP_API_URL}/api/boards/${boardId}`, {
+      const apiUrl = 'http://45.77.172.27:5001';
+      await axios.put(`${apiUrl}/api/boards/${boardId}`, {
         name: boardName,
         description: boardDescription
       }, {
@@ -209,7 +252,7 @@ const Board = () => {
     try {
       const token = localStorage.getItem('accessToken');
       if (updatedTask.id) {
-        const apiUrl = 'http://localhost:5000';
+        const apiUrl = 'http://45.77.172.27:5001';
         await axios.put(`${apiUrl}/api/tasks/${updatedTask.id}`, updatedTask, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -229,7 +272,7 @@ const Board = () => {
   const handleTaskDelete = async (taskId) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const apiUrl = 'http://localhost:5000';
+      const apiUrl = 'http://45.77.172.27:5001';
       await axios.delete(`${apiUrl}/api/tasks/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -245,30 +288,25 @@ const Board = () => {
   };
 
   const handleAddTask = async () => {
-    const newTask = {
-      name: 'New Task',
-      description: '',
-      status: 'in-progress',
-      icon: '📝'
-    };
-
     try {
       const token = localStorage.getItem('accessToken');
-      const apiUrl = 'http://localhost:5000';
+      const apiUrl = 'http://45.77.172.27:5001';
+      
       const response = await axios.post(`${apiUrl}/api/boards/${boardId}/tasks`, newTask, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`
         }
       });
-      const createdTask = response.data;
-      setSelectedTask(createdTask);
-      setIsModalOpen(true);
-      await fetchBoard();
-      setError(null);
+
+      setTasks([...tasks, response.data]);
+      setIsAddingTask(false);
+      setNewTask({ name: '', description: '' });
     } catch (err) {
-      console.error('Task creation error:', err);
-      handleError(err);
+      console.error('Error adding task:', err);
+      if (err.response?.status === 401) {
+        localStorage.removeItem('accessToken');
+        navigate('/');
+      }
     }
   };
 
@@ -325,6 +363,7 @@ const Board = () => {
             <EditIcon onClick={() => setIsEditingBoard(true)}>✏️</EditIcon>
           </>
         )}
+        <AddTaskButton onClick={() => setIsAddingTask(true)}>Add New Task</AddTaskButton>
       </BoardHeader>
       
       {isEditingBoard ? (
@@ -345,11 +384,6 @@ const Board = () => {
             onClick={() => handleTaskClick(task)}
           />
         ))}
-        
-        <AddTaskButton onClick={handleAddTask}>
-          <span>➕</span>
-          Add new task
-        </AddTaskButton>
       </TaskList>
 
       {isModalOpen && selectedTask && (
@@ -362,6 +396,24 @@ const Board = () => {
           onUpdate={handleTaskUpdate}
           onDelete={handleTaskDelete}
         />
+      )}
+
+      {isAddingTask && (
+        <TaskForm>
+          <h2>Add New Task</h2>
+          <Input
+            placeholder="Task name"
+            value={newTask.name}
+            onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+          />
+          <TextArea
+            placeholder="Task description"
+            value={newTask.description}
+            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+          />
+          <Button onClick={handleAddTask}>Save</Button>
+          <Button onClick={() => setIsAddingTask(false)}>Cancel</Button>
+        </TaskForm>
       )}
     </BoardContainer>
   );

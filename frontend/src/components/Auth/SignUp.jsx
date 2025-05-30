@@ -130,7 +130,7 @@ const SignUp = ({ setAuth }) => {
     setLoading(true);
 
     try {
-      const apiUrl = 'http://localhost:5000';
+      const apiUrl = 'http://45.77.172.27:5001';
       const response = await axios.post(`${apiUrl}/api/auth/signup`, {
         email: formData.email,
         password: formData.password

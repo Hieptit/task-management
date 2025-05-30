@@ -120,7 +120,7 @@ const Login = ({ setAuth }) => {
         return;
       }
 
-      const apiUrl = 'http://localhost:5000';
+      const apiUrl = 'http://45.77.172.27:5001';
       console.log('Attempting login...');
       const response = await axios.post(`${apiUrl}/api/auth/login`, formData);
       console.log('Login response:', response.data);
