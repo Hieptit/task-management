@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import styled from 'styled-components';
-import axios from 'axios';
+import axiosInstance from '../../config/axios';
 
 const SignUpContainer = styled.div`
   display: flex;
@@ -130,8 +130,7 @@ const SignUp = ({ setAuth }) => {
     setLoading(true);
 
     try {
-      const apiUrl = 'http://45.77.172.27:5001';
-      const response = await axios.post(`${apiUrl}/api/auth/signup`, {
+      const response = await axiosInstance.post('/auth/signup', {
         email: formData.email,
         password: formData.password
       });
