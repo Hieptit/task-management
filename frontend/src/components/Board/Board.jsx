@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import axios from 'axios';
+import axiosInstance from '../../config/axios';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -155,19 +155,14 @@ const Board = () => {
   const createNewBoard = async () => {
     console.log('Creating new board...');
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) {
         console.log('No token found, redirecting to login');
         navigate('/');
         return;
       }
 
-      const apiUrl = 'http://45.77.172.27:5001';
-      const response = await axios.post(`${apiUrl}/api/boards`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.post('/boards');
       
       console.log('New board created:', response.data);
       if (response.data && response.data.boardId) {
@@ -193,18 +188,13 @@ const Board = () => {
         return;
       }
 
-      const apiUrl = 'http://45.77.172.27:5001';
-      const response = await axios.get(`${apiUrl}/api/boards/${boardId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
+      const response = await axiosInstance.get(`/boards/${boardId}`);
       console.log('Board data received:', response.data);
+      
       if (response.data) {
+        setBoardName(response.data.name);
+        setBoardDescription(response.data.description);
         setTasks(response.data.tasks || []);
-        setBoardName(response.data.name || 'My Task Board');
-        setBoardDescription(response.data.description || 'Tasks to keep organised');
         setError(null);
       } else {
         setError('Invalid board data received');
@@ -219,26 +209,19 @@ const Board = () => {
 
   const handleError = (err) => {
     if (err.response?.status === 401) {
-      console.log('Authentication error, redirecting to login');
       localStorage.removeItem('accessToken');
       navigate('/');
     } else {
-      setError(err.response?.data?.message || 'Failed to load board');
-      setLoading(false);
+      setError(err.response?.data?.message || 'An error occurred');
     }
+    setLoading(false);
   };
 
   const handleBoardUpdate = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const apiUrl = 'http://45.77.172.27:5001';
-      await axios.put(`${apiUrl}/api/boards/${boardId}`, {
+      await axiosInstance.put(`/boards/${boardId}`, {
         name: boardName,
         description: boardDescription
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
       setIsEditingBoard(false);
       setError(null);
@@ -250,17 +233,11 @@ const Board = () => {
 
   const handleTaskUpdate = async (updatedTask) => {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (updatedTask.id) {
-        const apiUrl = 'http://45.77.172.27:5001';
-        await axios.put(`${apiUrl}/api/tasks/${updatedTask.id}`, updatedTask, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-      await fetchBoard();
+      const response = await axiosInstance.put(`/tasks/${updatedTask.id}`, updatedTask);
+      const updatedTaskData = response.data;
+      setTasks(tasks.map(task => 
+        task.id === updatedTaskData.id ? updatedTaskData : task
+      ));
       setIsModalOpen(false);
       setError(null);
     } catch (err) {
@@ -271,14 +248,8 @@ const Board = () => {
 
   const handleTaskDelete = async (taskId) => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const apiUrl = 'http://45.77.172.27:5001';
-      await axios.delete(`${apiUrl}/api/tasks/${taskId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      await fetchBoard();
+      await axiosInstance.delete(`/tasks/${taskId}`);
+      setTasks(tasks.filter(task => task.id !== taskId));
       setIsModalOpen(false);
       setError(null);
     } catch (err) {
@@ -289,24 +260,20 @@ const Board = () => {
 
   const handleAddTask = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const apiUrl = 'http://45.77.172.27:5001';
-      
-      const response = await axios.post(`${apiUrl}/api/boards/${boardId}/tasks`, newTask, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const response = await axiosInstance.post(`/boards/${boardId}/tasks`, {
+        name: newTask.name,
+        description: newTask.description,
+        status: 'in-progress',
+        icon: '📝'
       });
-
+      
       setTasks([...tasks, response.data]);
       setIsAddingTask(false);
       setNewTask({ name: '', description: '' });
+      setError(null);
     } catch (err) {
-      console.error('Error adding task:', err);
-      if (err.response?.status === 401) {
-        localStorage.removeItem('accessToken');
-        navigate('/');
-      }
+      console.error('Task creation error:', err);
+      handleError(err);
     }
   };
 

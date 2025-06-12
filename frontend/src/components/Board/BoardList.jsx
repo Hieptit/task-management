@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import axios from 'axios';
+import axiosInstance from '../../config/axios';
 
 const BoardListContainer = styled.div`
   padding: 20px;
@@ -109,13 +109,7 @@ const BoardList = () => {
         return;
       }
 
-      const apiUrl = 'http://45.77.172.27:5001';
-      const response = await axios.get(`${apiUrl}/api/boards`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
+      const response = await axiosInstance.get('/boards');
       setBoards(response.data);
       setError(null);
     } catch (err) {
@@ -139,12 +133,7 @@ const BoardList = () => {
         return;
       }
 
-      const apiUrl = 'http://45.77.172.27:5001';
-      const response = await axios.post(`${apiUrl}/api/boards`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.post('/boards');
 
       if (response.data && response.data.boardId) {
         navigate(`/board/${response.data.boardId}`);
